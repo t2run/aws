@@ -71,11 +71,11 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	statusCode := 200
 	if sha == ubeSign {
-		statusCode = 200
+		return generatePolicy("user", "Allow", request.MethodArn, map[string]interface{}{"name": secret}), nil
 	} else {
-		statusCode = 403
+		return events.APIGatewayCustomAuthorizerResponse{}, errors.New("Unauthorized")
 	}
-	return events.APIGatewayProxyResponse{Body: respString, StatusCode: statusCode, IsBase64Encoded: false}, nil
+	//return events.APIGatewayProxyResponse{Body: respString, StatusCode: statusCode, IsBase64Encoded: false}, nil
 
 }
 
@@ -144,4 +144,23 @@ func getSecret() (secretString string) {
 	return secretString
 
 	// Your code goes here.
+}
+
+func generatePolicy(principalID, effect, resource string, context map[string]interface{}) events.APIGatewayCustomAuthorizerResponse {
+	authResponse := events.APIGatewayCustomAuthorizerResponse{PrincipalID: principalID}
+
+	if effect != "" && resource != "" {
+		authResponse.PolicyDocument = events.APIGatewayCustomAuthorizerPolicy{
+			Version: "2012-10-17",
+			Statement: []events.IAMPolicyStatement{
+				{
+					Action:   []string{"execute-api:Invoke"},
+					Effect:   effect,
+					Resource: []string{resource},
+				},
+			},
+		}
+	}
+	authResponse.Context = context
+	return authResponse
 }
