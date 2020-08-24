@@ -30,7 +30,7 @@ func main() {
 	lambda.Start(handler)
 }
 
-func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
+func handler(ctx context.Context, request events.APIGatewayProxyRequest, authRequest events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
 
 	log.Printf("Processing request data for request %s.\n", request.RequestContext.RequestID)
 	log.Printf("Body size = %d.\n", len(request.Body))
@@ -45,6 +45,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		log.Printf("    %s: %s\n", key, value)
 	}
 
+	newResource := authRequest.MethodArn
 	//return events.APIGatewayProxyResponse{code, headers, string(response), false}, nil
 
 	//reading a secret
@@ -70,7 +71,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	log.Printf("Returning string: %v", respString)
 
 	if sha == ubeSign {
-		return generatePolicy(map[string]interface{}{"name": secret}), nil
+		return generatePolicy(newResource, map[string]interface{}{"name": secret}), nil
 	} else {
 		return events.APIGatewayCustomAuthorizerResponse{}, errors.New("Unauthorized")
 	}
@@ -145,7 +146,7 @@ func getSecret() (secretString string) {
 	// Your code goes here.
 }
 
-func generatePolicy(context map[string]interface{}) events.APIGatewayCustomAuthorizerResponse {
+func generatePolicy(newResource string, context map[string]interface{}) events.APIGatewayCustomAuthorizerResponse {
 	authResponse := events.APIGatewayCustomAuthorizerResponse{PrincipalID: "user"}
 
 	authResponse.PolicyDocument = events.APIGatewayCustomAuthorizerPolicy{
@@ -154,7 +155,7 @@ func generatePolicy(context map[string]interface{}) events.APIGatewayCustomAutho
 			{
 				Action:   []string{"execute-api:Invoke"},
 				Effect:   "Allow",
-				Resource: []string{"*"},
+				Resource: []string{newResource},
 			},
 		},
 	}
