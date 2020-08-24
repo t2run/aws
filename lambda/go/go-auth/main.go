@@ -30,7 +30,7 @@ func main() {
 	lambda.Start(handler)
 }
 
-func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
 
 	log.Printf("Processing request data for request %s.\n", request.RequestContext.RequestID)
 	log.Printf("Body size = %d.\n", len(request.Body))
@@ -69,9 +69,8 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	respString := "Hello " + request.Body
 	log.Printf("Returning string: %v", respString)
 
-	statusCode := 200
 	if sha == ubeSign {
-		return generatePolicy("user", "Allow", request.MethodArn, map[string]interface{}{"name": secret}), nil
+		return generatePolicy(map[string]interface{}{"name": secret}), nil
 	} else {
 		return events.APIGatewayCustomAuthorizerResponse{}, errors.New("Unauthorized")
 	}
@@ -146,21 +145,20 @@ func getSecret() (secretString string) {
 	// Your code goes here.
 }
 
-func generatePolicy(principalID, effect, resource string, context map[string]interface{}) events.APIGatewayCustomAuthorizerResponse {
-	authResponse := events.APIGatewayCustomAuthorizerResponse{PrincipalID: principalID}
+func generatePolicy(context map[string]interface{}) events.APIGatewayCustomAuthorizerResponse {
+	authResponse := events.APIGatewayCustomAuthorizerResponse{PrincipalID: "user"}
 
-	if effect != "" && resource != "" {
-		authResponse.PolicyDocument = events.APIGatewayCustomAuthorizerPolicy{
-			Version: "2012-10-17",
-			Statement: []events.IAMPolicyStatement{
-				{
-					Action:   []string{"execute-api:Invoke"},
-					Effect:   effect,
-					Resource: []string{resource},
-				},
+	authResponse.PolicyDocument = events.APIGatewayCustomAuthorizerPolicy{
+		Version: "2012-10-17",
+		Statement: []events.IAMPolicyStatement{
+			{
+				Action:   []string{"execute-api:Invoke"},
+				Effect:   "Allow",
+				Resource: []string{"*"},
 			},
-		}
+		},
 	}
+
 	authResponse.Context = context
 	return authResponse
 }
