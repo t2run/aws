@@ -34,12 +34,13 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	fmt.Printf("Processing request data for request %s.\n", request.RequestContext.RequestID)
 	fmt.Printf("Body size = %d.\n", len(request.Body))
 	fmt.Println(ctx)
-	fmt.Println("Headers:")
-	ubeSign := "notvalid"
+	fmt.Println("REQ")
+	fmt.Println(request)
+	uberSign := ""
 	for key, value := range request.Headers {
 
-		if key == "signat" {
-			ubeSign = value
+		if key == "X-Uber-Signature" {
+			uberSign = value
 		}
 		fmt.Printf("    %s: %s\n", key, value)
 	}
@@ -64,7 +65,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	//respString := "Hello " + request.Body
 	//fmt.Printf("Returning string: %v", respString)
 
-	if sha == ubeSign {
+	if sha == uberSign {
 		return generatePolicy(map[string]interface{}{"name": secret}), nil
 	} else {
 		return events.APIGatewayCustomAuthorizerResponse{}, errors.New("Unauthorized")
