@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -30,30 +29,25 @@ func main() {
 	lambda.Start(handler)
 }
 
-func handler(ctx context.Context, request events.APIGatewayProxyRequest, authRequest events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
 
-	log.Printf("Processing request data for request %s.\n", request.RequestContext.RequestID)
-	log.Printf("Body size = %d.\n", len(request.Body))
-
-	log.Println("Headers:")
+	fmt.Printf("Processing request data for request %s.\n", request.RequestContext.RequestID)
+	fmt.Printf("Body size = %d.\n", len(request.Body))
+	fmt.Println(ctx)
+	fmt.Println("Headers:")
 	ubeSign := "notvalid"
 	for key, value := range request.Headers {
 
 		if key == "signat" {
 			ubeSign = value
 		}
-		log.Printf("    %s: %s\n", key, value)
+		fmt.Printf("    %s: %s\n", key, value)
 	}
 
-	newResource := authRequest.MethodArn
-	//return events.APIGatewayProxyResponse{code, headers, string(response), false}, nil
-
-	//reading a secret
-
-	//secret := "mysecret"
 	secret := getSecret()
-	fmt.Println(" SEcret obtained is : " + secret)
-	data := "data"
+	fmt.Println(" Secret is : " + secret)
+	//data := "data"
+	data := request.Body
 	fmt.Printf("Secret: %s Data: %s\n", secret, data)
 
 	// Create a new HMAC by defining the hash type and the key (as byte array)
@@ -65,18 +59,16 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest, authReq
 	// Get result and encode as hexadecimal string
 	sha := hex.EncodeToString(h.Sum(nil))
 
-	fmt.Println("Result: " + sha)
+	fmt.Println("Calculated Signature: " + sha)
 
-	respString := "Hello " + request.Body
-	log.Printf("Returning string: %v", respString)
+	//respString := "Hello " + request.Body
+	//fmt.Printf("Returning string: %v", respString)
 
 	if sha == ubeSign {
-		return generatePolicy(newResource, map[string]interface{}{"name": secret}), nil
+		return generatePolicy(map[string]interface{}{"name": secret}), nil
 	} else {
 		return events.APIGatewayCustomAuthorizerResponse{}, errors.New("Unauthorized")
 	}
-	//return events.APIGatewayProxyResponse{Body: respString, StatusCode: statusCode, IsBase64Encoded: false}, nil
-
 }
 
 func getSecret() (secretString string) {
@@ -131,23 +123,12 @@ func getSecret() (secretString string) {
 	//var decodedBinarySecret string
 	if result.SecretString != nil {
 		secretString = *result.SecretString
-	} else {
-		//decodedBinarySecretBytes := make([]byte, base64.StdEncoding.DecodedLen(len(result.SecretBinary)))
-		//len, err := base64.StdEncoding.Decode(decodedBinarySecretBytes, result.SecretBinary)
-		if err != nil {
-			fmt.Println("Base64 Decode Error:", err)
-			return
-		}
-		//decodedBinarySecret = string(decodedBinarySecretBytes[:len])
 	}
-
-	return secretString
-
-	// Your code goes here.
+	return
 }
 
-func generatePolicy(newResource string, context map[string]interface{}) events.APIGatewayCustomAuthorizerResponse {
-	authResponse := events.APIGatewayCustomAuthorizerResponse{PrincipalID: "user"}
+func generatePolicy(context map[string]interface{}) events.APIGatewayCustomAuthorizerResponse {
+	authResponse := events.APIGatewayCustomAuthorizerResponse{}
 
 	authResponse.PolicyDocument = events.APIGatewayCustomAuthorizerPolicy{
 		Version: "2012-10-17",
@@ -155,7 +136,7 @@ func generatePolicy(newResource string, context map[string]interface{}) events.A
 			{
 				Action:   []string{"execute-api:Invoke"},
 				Effect:   "Allow",
-				Resource: []string{newResource},
+				Resource: []string{"*"},
 			},
 		},
 	}
