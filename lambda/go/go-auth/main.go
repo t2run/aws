@@ -16,15 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 )
 
-type myReturn struct {
-	Response string `json:"response"`
-}
-
-var (
-	// ErrNameNotProvided is thrown when a name is not provided
-	ErrNameNotProvided = errors.New("no name was provided in the HTTP body")
-)
-
 func main() {
 	lambda.Start(handler)
 }
@@ -33,6 +24,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	fmt.Printf("Processing request data for request %s.\n", request.RequestContext.RequestID)
 	fmt.Printf("Body size = %d.\n", len(request.Body))
+	fmt.Println("Context")
 	fmt.Println(ctx)
 	fmt.Println("REQ")
 	fmt.Println(request)
@@ -46,6 +38,10 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}
 
 	secret := getSecret()
+
+	// if errSecret != nil {
+
+	// }
 	fmt.Println(" Secret is : " + secret)
 	//data := "data"
 	data := request.Body
@@ -130,7 +126,6 @@ func getSecret() (secretString string) {
 
 func generatePolicy(context map[string]interface{}) events.APIGatewayCustomAuthorizerResponse {
 	authResponse := events.APIGatewayCustomAuthorizerResponse{}
-
 	authResponse.PolicyDocument = events.APIGatewayCustomAuthorizerPolicy{
 		Version: "2012-10-17",
 		Statement: []events.IAMPolicyStatement{
